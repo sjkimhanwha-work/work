@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>팀업무 주차별 현황 공유</title>
+<style>
+  body { font-family: sans-serif; margin: 24px; }
+  h1 { font-size: 20px; margin: 0 0 12px; }
+  .tabs { margin: 0 0 12px; text-align: left; }
+  .tabs button { padding: 6px 16px; font-size: 14px; cursor: pointer; border: 1px solid #999; background: #fff; margin-right: 4px; }
+  .tabs button.active { background: #333; color: #fff; border-color: #333; }
+  .layout { display: flex; gap: 16px; align-items: flex-start; }
+  .sidebar { width: 190px; flex-shrink: 0; border: 1px solid #bbb; padding: 12px; font-size: 13px; }
+  .sidebar h2 { font-size: 14px; margin: 0 0 8px; }
+  .filters .group { margin-bottom: 10px; }
+  .filters .label { font-weight: bold; display: block; margin-bottom: 4px; }
+  .filters button { display: block; width: 100%; margin: 2px 0; padding: 4px 8px; font-size: 13px; cursor: pointer; border: 1px solid #999; background: #fff; text-align: left; }
+  .filters button.active { background: #333; color: #fff; border-color: #333; }
+  #btnReset { width: 100%; padding: 6px; font-size: 13px; cursor: pointer; }
+  .main { flex: 1; min-width: 0; }
+  #count { font-size: 15px; font-weight: bold; margin: 0 0 12px; }
+  .cards { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+  .card { border: 1px solid #bbb; padding: 8px 12px; min-width: 100px; }
+  .card .num { font-size: 22px; font-weight: bold; }
+  .card .cap { font-size: 12px; color: #555; }
+  .bars { margin: 0 0 12px; font-size: 13px; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+  .bar-row .name { width: 70px; flex-shrink: 0; }
+  .bar-row .track { flex: 1; background: #eee; height: 14px; }
+  .bar-row .fill { height: 14px; background: #555; }
+  .bar-row .val { width: 60px; flex-shrink: 0; text-align: right; }
+  .sample-grid { display: flex; gap: 16px; margin-bottom: 12px; }
+  .panel { flex: 1; min-width: 0; border: 1px solid #bbb; padding: 10px 12px; }
+  .panel h3 { font-size: 14px; margin: 0 0 8px; }
+  .vbars { display: flex; align-items: flex-end; gap: 10px; height: 170px; border-bottom: 1px solid #999; padding-bottom: 2px; }
+  .vcol { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .vcol .vfill { width: 70%; background: #555; }
+  .vcol .vname { font-size: 12px; margin-top: 4px; white-space: nowrap; }
+  .vcol .vval { font-size: 12px; font-weight: bold; }
+  .matrix td .mini { display: block; height: 8px; background: #555; margin-top: 2px; }
+  .pgroups { display: flex; gap: 16px; }
+  .pgroup { flex: 1; min-width: 0; border: 2px solid #333; padding: 8px; }
+  .pgroup h4 { font-size: 13px; margin: 0 0 6px; text-align: center; }
+  .vcol .vfill.st-완료 { background: rgb(46, 125, 50); }
+  .vcol .vfill.st-정상 { background: rgb(21, 101, 192); }
+  .vcol .vfill.st-지연 { background: rgb(230, 81, 0); }
+  .vcol .vfill.st-병목 { background: rgb(198, 40, 40); }
+  .bar-row .fill.st-완료 { background: rgb(46, 125, 50); }
+  .bar-row .fill.st-정상 { background: rgb(21, 101, 192); }
+  .bar-row .fill.st-지연 { background: rgb(230, 81, 0); }
+  .bar-row .fill.st-병목 { background: rgb(198, 40, 40); }
+  .login-box { width: 320px; border: 1px solid #bbb; padding: 20px; }
+  .login-box h3 { font-size: 15px; margin: 0 0 12px; }
+  .login-box label { display: block; font-size: 13px; font-weight: bold; margin: 8px 0 4px; }
+  .login-box input { width: 100%; box-sizing: border-box; padding: 8px; font-size: 14px; border: 1px solid #999; }
+  #btnLogin { width: 100%; margin-top: 16px; padding: 10px; font-size: 14px; cursor: pointer; background: #333; color: #fff; border: 1px solid #333; }
+  #loginMsg { font-size: 13px; margin-top: 8px; min-height: 18px; }
+  .range-bar { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; flex-wrap: wrap; }
+  .range-bar select { padding: 5px 8px; font-size: 13px; }
+  #btnRange { padding: 5px 14px; font-size: 13px; cursor: pointer; border: 1px solid #333; background: #333; color: #fff; }
+  #btnRangeReset { padding: 5px 14px; font-size: 13px; cursor: pointer; border: 1px solid #999; background: #fff; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid #bbb; padding: 6px 8px; text-align: left; }
+  th { background: #eee; white-space: nowrap; }
+</style>
+</head>
+<body>
+<h1>팀업무 주차별 현황 공유</h1>
+<div class="tabs">
+  <button id="tabLogin" type="button">관리자 로그인</button><button id="tabSample" type="button">현황판</button><button id="tabAll" type="button">전체 현황</button>
+</div>
+<div id="viewLogin">
+  <div class="login-box">
+    <h3>관리자 로그인</h3>
+    <label for="loginId">ID</label>
+    <input id="loginId" type="text" autocomplete="username">
+    <label for="loginPw">PW</label>
+    <input id="loginPw" type="password" autocomplete="current-password">
+    <button id="btnLogin" type="button">입장</button>
+    <p id="loginMsg"></p>
+  </div>
+</div>
+<div id="viewSample" style="display:none">
+  <div class="range-bar">
+    <span><b>일자 선택</b></span>
+    <select id="rangeFrom"></select>
+    <span>~</span>
+    <select id="rangeTo"></select>
+    <button id="btnRange" type="button">적용</button>
+    <button id="btnRangeReset" type="button">전체</button>
+    <span id="rangeMsg"></span>
+  </div>
+  <div class="sample-grid">
+    <div class="panel">
+      <h3>전체 현황 (상태별 건수)</h3>
+      <div class="vbars" id="sampleAll"></div>
+    </div>
+    <div class="panel">
+      <h3>인별 현황 (담당자별 건수)</h3>
+      <div class="vbars" id="samplePerson"></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>인별 × 상태 (가로: 완료·정상·지연·병목, 세로: 건수)</h3>
+    <div class="pgroups" id="sampleGroups"></div>
+  </div>
+</div>
+<div id="viewAll" style="display:none">
+<div class="layout">
+  <div class="sidebar">
+    <h2>필터</h2>
+    <div class="filters">
+      <div class="group" id="fAssignee"><span class="label">담당자</span></div>
+      <div class="group" id="fStatus"><span class="label">상태</span></div>
+      <div class="group" id="fType"><span class="label">구분</span></div>
+      <div class="group" id="fWeek"><span class="label">주차</span></div>
+      <div class="group"><button id="btnReset" type="button">전체보기</button></div>
+    </div>
+  </div>
+  <div class="main">
+    <div class="cards" id="cards"></div>
+    <div class="bars" id="bars"></div>
+    <p id="count">총 N건</p>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th><th>주차</th><th>담당자</th><th>사업</th><th>업무</th><th>내용</th>
+      <th>구분</th><th>상태</th><th>진척율</th><th>협조</th><th>차주계속</th><th>종료(예정)일</th>
+    </tr>
+  </thead>
+  <tbody id="tbody"></tbody>
+</table>
+  </div>
+</div>
+</div>
+
+<script src="data.js"></script>
+<script src="auth.js"></script>
+<script>
+  var rows = (typeof DATA !== "undefined") ? DATA : [];
+  var sel = { assignee: "전체", status: "전체", type: "전체", week: "전체" };
+
+  function uniq(key) {
+    var seen = [], i;
+    for (i = 0; i < rows.length; i++) {
+      if (seen.indexOf(rows[i][key]) === -1) seen.push(rows[i][key]);
+    }
+    return seen;
+  }
+
+  function makeButtons(boxId, key, values) {
+    var box = document.getElementById(boxId);
+    var all = ["전체"].concat(values);
+    for (var i = 0; i < all.length; i++) {
+      (function (v) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.textContent = v;
+        if (v === "전체") b.className = "active";
+        b.onclick = function () {
+          sel[key] = v;
+          var btns = box.getElementsByTagName("button");
+          for (var j = 0; j < btns.length; j++) {
+            btns[j].className = (btns[j].textContent === v) ? "active" : "";
+          }
+          render();
+        };
+        box.appendChild(b);
+      })(all[i]);
+    }
+  }
+
+  function filtered() {
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      if (sel.assignee !== "전체" && r.assignee !== sel.assignee) continue;
+      if (sel.status !== "전체" && r.status !== sel.status) continue;
+      if (sel.type !== "전체" && r.type !== sel.type) continue;
+      if (sel.week !== "전체" && r.week !== sel.week) continue;
+      out.push(r);
+    }
+    return out;
+  }
+
+  function dueCell(r) {
+    if (r.nextWeek) {
+      return '<input type="date" data-id="' + r.id + '" value="' + (r.due ? r.due : "") + '" onchange="setDue(this)">';
+    }
+    return r.due ? r.due : "-";
+  }
+
+  function setDue(el) {
+    var id = parseInt(el.getAttribute("data-id"), 10);
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].id === id) { rows[i].due = el.value; break; }
+    }
+  }
+
+  function render() {
+    var list = filtered();
+    document.getElementById("count").textContent = "총 " + rows.length + "건 중 " + list.length + "건 표시";
+    renderSummary(list);
+    var html = "";
+    for (var i = 0; i < list.length; i++) {
+      var r = list[i];
+      html += "<tr>"
+        + "<td>" + r.id + "</td>"
+        + "<td>" + r.week + "</td>"
+        + "<td>" + r.assignee + "</td>"
+        + "<td>" + r.business + "</td>"
+        + "<td>" + r.task + "</td>"
+        + "<td>" + r.detail + "</td>"
+        + "<td>" + r.type + "</td>"
+        + "<td>" + r.status + "</td>"
+        + "<td>" + (r.progress === null ? "-" : r.progress + "%") + "</td>"
+        + "<td>" + r.coop + "</td>"
+        + "<td>" + (r.nextWeek ? "예" : "아니오") + "</td>"
+        + "<td>" + dueCell(r) + "</td>"
+        + "</tr>";
+    }
+    document.getElementById("tbody").innerHTML = html;
+  }
+
+  function countBy(list, key, val) {
+    var n = 0;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i][key] === val) n++;
+    }
+    return n;
+  }
+
+  function renderSummary(list) {
+    var done = countBy(list, "status", "완료");
+    var delayed = countBy(list, "status", "지연");
+    var stuck = countBy(list, "status", "병목");
+    var html = ""
+      + '<div class="card"><div class="num">' + list.length + '</div><div class="cap">표시 건수</div></div>'
+      + '<div class="card"><div class="num">' + done + '</div><div class="cap">완료</div></div>'
+      + '<div class="card"><div class="num">' + delayed + '</div><div class="cap">지연</div></div>'
+      + '<div class="card"><div class="num">' + stuck + '</div><div class="cap">병목</div></div>';
+    document.getElementById("cards").innerHTML = html;
+
+    var keys = uniq("status");
+    var max = 1, i;
+    for (i = 0; i < keys.length; i++) {
+      var c = countBy(list, "status", keys[i]);
+      if (c > max) max = c;
+    }
+    var bars = "";
+    for (i = 0; i < keys.length; i++) {
+      var n = countBy(list, "status", keys[i]);
+      var pct = Math.round(n / max * 100);
+      bars += '<div class="bar-row"><span class="name">' + keys[i] + '</span>'
+        + '<span class="track"><span class="fill st-' + keys[i] + '" style="display:block;width:' + pct + '%"></span></span>'
+        + '<span class="val">' + n + '건</span></div>';
+    }
+    document.getElementById("bars").innerHTML = bars;
+  }
+
+  function vbars(boxId, names, counts, colorBy) {
+    var max = 1, i;
+    for (i = 0; i < counts.length; i++) { if (counts[i] > max) max = counts[i]; }
+    var html = "";
+    for (i = 0; i < names.length; i++) {
+      var h = Math.round(counts[i] / max * 130);
+      var cls = (colorBy && colorBy[i]) ? " st-" + colorBy[i] : "";
+      html += '<div class="vcol"><span class="vval">' + counts[i] + '</span>'
+        + '<span class="vfill' + cls + '" style="height:' + h + 'px"></span>'
+        + '<span class="vname">' + names[i] + '</span></div>';
+    }
+    document.getElementById(boxId).innerHTML = html;
+  }
+
+  function renderSample() {
+    var data = rangedRows();
+    var statuses = [], sseen = {}, si;
+    for (si = 0; si < rows.length; si++) {
+      if (!sseen[rows[si].status]) { sseen[rows[si].status] = 1; statuses.push(rows[si].status); }
+    }
+    var scounts = [];
+    for (var i = 0; i < statuses.length; i++) scounts.push(countBy(data, "status", statuses[i]));
+    vbars("sampleAll", statuses, scounts, statuses);
+
+    var people = uniq("assignee");
+    var pcounts = [];
+    for (i = 0; i < people.length; i++) pcounts.push(countBy(data, "assignee", people[i]));
+    vbars("samplePerson", people, pcounts);
+
+    var cols = ["완료", "정상", "지연", "병목"];
+    var gmax = 1, gi, gj, gk;
+    for (gi = 0; gi < people.length; gi++) {
+      for (gj = 0; gj < cols.length; gj++) {
+        var gn = 0;
+        for (gk = 0; gk < data.length; gk++) {
+          if (data[gk].assignee === people[gi] && data[gk].status === cols[gj]) gn++;
+        }
+        if (gn > gmax) gmax = gn;
+      }
+    }
+    var ghtml = "";
+    for (gi = 0; gi < people.length; gi++) {
+      ghtml += '<div class="pgroup"><h4>' + people[gi] + '</h4><div class="vbars">';
+      for (gj = 0; gj < cols.length; gj++) {
+        var m = 0;
+        for (gk = 0; gk < data.length; gk++) {
+          if (data[gk].assignee === people[gi] && data[gk].status === cols[gj]) m++;
+        }
+        var gh = Math.round(m / gmax * 130);
+        ghtml += '<div class="vcol"><span class="vval">' + m + '</span>'
+          + '<span class="vfill st-' + cols[gj] + '" style="height:' + gh + 'px"></span>'
+          + '<span class="vname">' + cols[gj] + '</span></div>';
+      }
+      ghtml += "</div></div>";
+    }
+    document.getElementById("sampleGroups").innerHTML = ghtml;
+  }
+
+  var rangeSel = { from: "전체", to: "전체" };
+
+  function weekOrder(w) {
+    var m = /(\d+)-(\d+)-(\d+)주차/.exec(w);
+    if (!m) return 0;
+    return parseInt(m[1], 10) * 10000 + parseInt(m[2], 10) * 100 + parseInt(m[3], 10);
+  }
+
+  function rangedRows() {
+    if (rangeSel.from === "전체" && rangeSel.to === "전체") return rows;
+    var f = (rangeSel.from === "전체") ? -Infinity : weekOrder(rangeSel.from);
+    var t = (rangeSel.to === "전체") ? Infinity : weekOrder(rangeSel.to);
+    if (f > t) { var tmp = f; f = t; t = tmp; }
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+      var o = weekOrder(rows[i].week);
+      if (o >= f && o <= t) out.push(rows[i]);
+    }
+    return out;
+  }
+
+  function fillRange() {
+    var weeks = uniq("week").sort(function (a, b) { return weekOrder(a) - weekOrder(b); });
+    var from = document.getElementById("rangeFrom");
+    var to = document.getElementById("rangeTo");
+    var opts = '<option value="전체">전체</option>';
+    for (var i = 0; i < weeks.length; i++) opts += '<option value="' + weeks[i] + '">' + weeks[i] + '</option>';
+    from.innerHTML = opts;
+    to.innerHTML = opts;
+  }
+
+  function applyRange() {
+    rangeSel.from = document.getElementById("rangeFrom").value;
+    rangeSel.to = document.getElementById("rangeTo").value;
+    var n = rangedRows().length;
+    document.getElementById("rangeMsg").textContent = "해당 " + n + "건 표시 중";
+    renderSample();
+  }
+
+  // TODO(권한): 나중에 적용 — 지금은 화면만 있고 체크 없이 통과
+  function doLogin() {
+    var msg = document.getElementById("loginMsg");
+    msg.style.color = "green";
+    msg.textContent = "현황판으로 이동합니다. (권한 미적용 상태)";
+    showTab("sample");
+  }
+
+  function showTab(which) {
+    document.getElementById("viewLogin").style.display = (which === "login") ? "" : "none";
+    document.getElementById("viewSample").style.display = (which === "sample") ? "" : "none";
+    document.getElementById("viewAll").style.display = (which === "all") ? "" : "none";
+    document.getElementById("tabLogin").className = (which === "login") ? "active" : "";
+    document.getElementById("tabSample").className = (which === "sample") ? "active" : "";
+    document.getElementById("tabAll").className = (which === "all") ? "active" : "";
+    if (which === "sample") renderSample();
+  }
+
+  document.getElementById("tabLogin").onclick = function () { showTab("login"); };
+  document.getElementById("tabSample").onclick = function () { showTab("sample"); };
+  document.getElementById("tabAll").onclick = function () { showTab("all"); };
+
+  makeButtons("fAssignee", "assignee", uniq("assignee"));
+  makeButtons("fStatus", "status", uniq("status"));
+  makeButtons("fType", "type", uniq("type"));
+  makeButtons("fWeek", "week", uniq("week"));
+  document.getElementById("btnReset").onclick = function () {
+    sel = { assignee: "전체", status: "전체", type: "전체", week: "전체" };
+    var btns = document.querySelectorAll(".filters .group button");
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].id === "btnReset") continue;
+      btns[i].className = (btns[i].textContent === "전체") ? "active" : "";
+    }
+    render();
+  };
+  document.getElementById("btnLogin").onclick = doLogin;
+  document.getElementById("loginPw").onkeydown = function (e) {
+    if (e.key === "Enter") doLogin();
+  };
+  document.getElementById("btnRange").onclick = applyRange;
+  document.getElementById("btnRangeReset").onclick = function () {
+    document.getElementById("rangeFrom").value = "전체";
+    document.getElementById("rangeTo").value = "전체";
+    document.getElementById("rangeMsg").textContent = "";
+    rangeSel = { from: "전체", to: "전체" };
+    renderSample();
+  };
+  fillRange();
+  render();
+  showTab("login");
+</script>
+</body>
+</html>
